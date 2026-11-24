@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi 3D Tekanan pada Zat Padat</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 999px;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        /* Custom Scrollbar for mobile panels */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 antialiased">
+
+    <!-- Container 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Header / Judul Mengambang -->
+    <div class="fixed top-4 left-4 z-10 pointer-events-none max-w-xs sm:max-w-md">
+        <div class="bg-slate-900/80 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-xl pointer-events-auto">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-3 h-3 rounded-full bg-sky-400 animate-pulse"></div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">Tekanan pada Zat Padat</h1>
+                </div>
+                <button id="btn-open-concept" class="text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Konsep Materi
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-1.5">Gunakan mouse/sentuhan untuk memutar, zoom, dan menggeser sudut pandang 3D.</p>
+        </div>
+    </div>
+
+    <!-- Modal Penjelasan Konsep Materi -->
+    <div id="concept-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/90">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Konsep Tekanan pada Zat Padat</h2>
+                        <p class="text-xs text-slate-400">Ringkasan Materi Fisika & Panduan Eksperimen</p>
+                    </div>
+                </div>
+                <button id="btn-close-concept" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-sm text-slate-300 leading-relaxed">
+                <!-- 1. Definisi -->
+                <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4">
+                    <h3 class="text-base font-semibold text-white mb-1.5">1. Apa itu Tekanan?</h3>
+                    <p>
+                        Dalam fisika, <strong class="text-sky-400">tekanan</strong> didefinisikan sebagai besarnya <strong class="text-rose-400">gaya tekan (F)</strong> yang bekerja secara tegak lurus pada suatu permukaan dibagi dengan <strong class="text-sky-400">luas bidang sentuh (A)</strong> tersebut. Semakin besar tekanan yang diterima benda lunak, semakin dalam bekas cekungan yang terbentuk.
+                    </p>
+                </div>
+
+                <!-- 2. Rumus Matematis -->
+                <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-center sm:text-left">
+                        <h3 class="text-base font-semibold text-white mb-1">2. Rumus Matematis</h3>
+                        <ul class="text-xs text-slate-400 space-y-1">
+                            <li><strong class="text-emerald-400">P</strong> = Tekanan (Pascal / Pa atau N/m²)</li>
+                            <li><strong class="text-rose-400">F</strong> = Gaya Tekan (Newton / N)</li>
+                            <li><strong class="text-sky-400">A</strong> = Luas Bidang Sentuh (m²)</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 px-6 py-3 rounded-2xl font-mono text-xl font-bold flex items-center gap-3 shrink-0">
+                        <span class="text-emerald-400">P</span>
+                        <span class="text-slate-400">=</span>
+                        <div class="text-center">
+                            <div class="border-b border-slate-500 px-2 pb-0.5 text-rose-400">F</div>
+                            <div class="pt-0.5 text-sky-400">A</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Faktor yang Memengaruhi -->
+                <div>
+                    <h3 class="text-base font-semibold text-white mb-2.5">3. Hubungan Antar Variabel</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5">
+                            <div class="font-semibold text-rose-400 mb-1">Berbanding Lurus dengan Gaya (F)</div>
+                            <p class="text-xs text-slate-300">
+                                Jika luas bidang tetap dan <strong>gaya diperbesar</strong>, maka <strong>tekanan semakin besar</strong> (benda amblas lebih dalam).
+                            </p>
+                        </div>
+                        <div class="bg-sky-500/10 border border-sky-500/20 rounded-2xl p-3.5">
+                            <div class="font-semibold text-sky-400 mb-1">Berbanding Terbalik dengan Luas (A)</div>
+                            <p class="text-xs text-slate-300">
+                                Jika gaya tetap dan <strong>luas bidang diperkecil</strong> (runcing), maka <strong>tekanan semakin besar</strong>. Sebaliknya, bidang lebar memperkecil tekanan.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Contoh Kehidupan Sehari-hari -->
+                <div>
+                    <h3 class="text-base font-semibold text-white mb-2">4. Penerapan dalam Kehidupan Sehari-hari</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-start gap-2.5 bg-slate-800/30 p-3 rounded-xl border border-slate-800">
+                            <span class="text-amber-400 font-bold">•</span>
+                            <div>
+                                <strong class="text-slate-200">Ujung Paku & Mata Pisau Dibuat Runcing/Tajam:</strong> Memperkecil luas bidang sentuh ($A$) sehingga dengan gaya dorong kecil dihasilkan tekanan besar agar mudah menembus kayu atau memotong benda.
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2.5 bg-slate-800/30 p-3 rounded-xl border border-slate-800">
+                            <span class="text-amber-400 font-bold">•</span>
+                            <div>
+                                <strong class="text-slate-200">Sepatu Salju & Kaki Bebek Berselaput:</strong> Memperbesar luas bidang sentuh ($A$) agar tekanan ke permukaan salju atau lumpur menjadi kecil sehingga tidak mudah terperosok.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-900/90 flex justify-end">
+                <button id="btn-got-it-concept" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-xs px-5 py-2.5 rounded-xl transition shadow-lg shadow-sky-500/20">
+                    Mengerti, Lanjut Simulasi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Indikator Edukasi & Rumus (Kiri Bawah) -->
+    <div class="fixed bottom-4 left-4 z-10 max-w-xs sm:max-w-sm w-[calc(100%-2rem)] sm:w-auto">
+        <div class="bg-slate-900/85 backdrop-blur-md border border-slate-700/60 p-4 rounded-2xl shadow-2xl">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">Kalkulasi Real-Time</span>
+                <span id="material-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Busa Lunak</span>
+            </div>
+            
+            <!-- Rumus Dinamis -->
+            <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 my-2 flex items-center justify-center gap-3 text-sm sm:text-base font-mono">
+                <div class="text-center">
+                    <span class="text-emerald-400 font-bold" id="formula-p">50.0</span>
+                    <div class="text-[10px] text-slate-500">P (Pa)</div>
+                </div>
+                <span class="text-slate-400">=</span>
+                <div class="text-center">
+                    <div class="border-b border-slate-600 px-2 pb-0.5 text-rose-400 font-bold" id="formula-f">200 N</div>
+                    <div class="pt-0.5 text-sky-400 font-bold" id="formula-a">4.0 m²</div>
+                </div>
+                <div class="h-8 w-[1px] bg-slate-800 mx-1"></div>
+                <div class="text-center">
+                    <span class="text-amber-400 font-bold" id="formula-depth">55.0</span>
+                    <div class="text-[10px] text-slate-500">Amblas (cm)</div>
+                </div>
+            </div>
+
+            <!-- Kesimpulan Dinamis -->
+            <div class="flex items-start gap-2 mt-2 bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50">
+                <svg class="w-4 h-4 text-sky-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p id="conclusion-text" class="text-xs text-slate-300 leading-relaxed">
+                    Atur slider Gaya (F) atau Luas Bidang (A) untuk melihat perubahan kedalaman cekungan benda.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tombol Toggle Panel Kontrol untuk Layar Kecil -->
+    <button id="toggle-controls-btn" class="fixed top-4 right-4 z-20 sm:hidden bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold p-3 rounded-xl shadow-lg transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+        </svg>
+    </button>
+
+    <!-- Panel Kontrol UI Mengambang (Kanan) -->
+    <div id="controls-panel" class="fixed top-16 sm:top-4 right-4 z-10 w-[calc(100%-2rem)] sm:w-80 max-h-[calc(100vh-5rem)] overflow-y-auto bg-slate-900/85 backdrop-blur-md border border-slate-700/60 p-5 rounded-2xl shadow-2xl transition-all duration-300 hidden sm:block">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200">Panel Kontrol</h2>
+            <button id="btn-reset" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Reset
+            </button>
+        </div>
+
+        <div class="space-y-5">
+            <!-- 1. Kontrol Gaya (F) -->
+            <div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label for="slider-f" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        Gaya Tekan (F)
+                    </label>
+                    <span id="val-f" class="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">200 N</span>
+                </div>
+                <input type="range" id="slider-f" min="10" max="500" step="5" value="200" class="w-full">
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>10 N</span>
+                    <span>500 N</span>
+                </div>
+            </div>
+
+            <!-- 2. Kontrol Luas Bidang Sentuh (A) -->
+            <div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label for="slider-a" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                        Luas Bidang Sentuh (A)
+                    </label>
+                    <span id="val-a" class="text-xs font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">4.0 m²</span>
+                </div>
+                <input type="range" id="slider-a" min="1" max="10" step="0.2" value="4" class="w-full">
+                <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                    <span>1 m² (Runcing)</span>
+                    <span>10 m² (Lebar)</span>
+                </div>
+            </div>
+
+            <!-- 3. Kontrol Tekanan (P) & Mode Kunci -->
+            <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-3">
+                <div class="flex justify-between items-center">
+                    <label for="slider-p" class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        Tekanan (P)
+                    </label>
+                    <span id="val-p" class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">50.0 Pa</span>
+                </div>
+                
+                <input type="range" id="slider-p" min="5" max="250" step="1" value="50" class="w-full" disabled>
+                
+                <div class="flex items-center justify-between pt-1">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="lock-p-checkbox" class="sr-only peer">
+                        <div class="relative w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <span class="ms-2 text-xs font-medium text-slate-300">Atur / Kunci Tekanan</span>
+                    </label>
+                </div>
+                <p id="lock-hint" class="text-[11px] text-slate-500 hidden">
+                    Mode manual aktif: Menggeser P akan otomatis menyesuaikan besar Gaya (F).
+                </p>
+            </div>
+
+            <!-- 4. Pilihan Material Alas -->
+            <div>
+                <label for="select-material" class="block text-xs font-medium text-slate-300 mb-1.5">Material Media Alas</label>
+                <select id="select-material" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl p-2.5 focus:ring-sky-500 focus:border-sky-500 outline-none">
+                    <option value="foam" selected>Busa Lunak (Sangat Mudah Amblas)</option>
+                    <option value="clay">Tanah Liat / Plastisin (Sedang)</option>
+                    <option value="wood">Kayu Keras (Sangat Sulit Amblas)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. INISIALISASI STATE & KONFIGURASI FISIKA
+        // ==========================================
+        const state = {
+            force: 200,         // Gaya (N): 10 - 500
+            area: 4.0,          // Luas Bidang Sentuh (m²): 1 - 10
+            pressure: 50.0,     // Tekanan (Pa): P = F / A
+            isPressureLocked: false,
+            material: 'foam',   // 'foam', 'clay', 'wood'
+            lastChanged: 'init' // Melacak variabel terakhir yang diubah untuk edukasi
+        };
+
+        // Karakteristik tiap material alas (elastisitas deformasi & warna)
+        const materialsConfig = {
+            foam: {
+                name: 'Busa Lunak',
+                compliance: 0.014, // Diperbesar agar cekungan sangat terlihat jelas
+                maxDepth: 1.75,
+                color: 0xfbbf24,   // Kuning cerah agar bayangan cekungan kontras
+                gridColor: '#92400e',
+                roughness: 0.85
+            },
+            clay: {
+                name: 'Tanah Liat',
+                compliance: 0.0075,
+                maxDepth: 1.35,
+                color: 0xd97706,   // Cokelat Terakota Terang
+                gridColor: '#78350f',
+                roughness: 0.7
+            },
+            wood: {
+                name: 'Kayu Keras',
+                compliance: 0.002,
+                maxDepth: 0.5,
+                color: 0xa16207,   // Cokelat Kayu
+                gridColor: '#422006',
+                roughness: 0.55
+            }
+        };
+
+        // ==========================================
+        // 2. SETUP SCENE, CAMERA, RENDERER THREE.JS
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
+        scene.fog = new THREE.FogExp2(0x0f172a, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        // Posisi kamera sedikit lebih tinggi dan miring agar kedalaman cekungan 3D terlihat jelas
+        camera.position.set(6.8, 6.8, 7.8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Mencegah kamera tembus ke bawah lantai
+        controls.minDistance = 4;
+        controls.maxDistance = 20;
+        controls.target.set(0, 1.2, 0);
+
+        // ==========================================
+        // 3. PENCAHAYAAN & LINGKUNGAN
+        // ==========================================
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight.position.set(6, 12, 7);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 1;
+        dirLight.shadow.camera.far = 30;
+        const d = 7;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+        rimLight.position.set(-7, 5, -6);
+        scene.add(rimLight);
+
+        // Lantai Grid
+        const gridHelper = new THREE.GridHelper(24, 24, 0x334155, 0x1e293b);
+        scene.add(gridHelper);
+
+        const floorGeo = new THREE.PlaneGeometry(24, 24);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+        const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.position.y = -0.01;
+        floorMesh.receiveShadow = true;
+        scene.add(floorMesh);
+
+        // ==========================================
+        // 4. PEMBUATAN TEKSTUR GRID UNTUK MEDIA ALAS
+        // ==========================================
+        function createGridTexture(baseHex, lineHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Warna dasar
+            ctx.fillStyle = '#' + baseHex.toString(16).padStart(6, '0');
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Garis grid agar deformasi/cekungan terlihat jelas
+            ctx.strokeStyle = lineHex;
+            ctx.lineWidth = 3;
+            const step = 32;
+            for (let i = 0; i <= 512; i += step) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, 512);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(512, i);
+                ctx.stroke();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(2, 2);
+            return texture;
+        }
+
+        // ==========================================
+        // 5. OBJEK 3D: MEDIA ALAS (DEFORMABLE MESH)
+        // ==========================================
+        const baseWidth = 6.5;
+        const baseHeight = 2.0;
+        const baseDepth = 6.5;
+        // Segmen tinggi (80x20x80) agar lekukan cekungan tajam dan sangat mulus
+        const baseGeometry = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth, 80, 16, 80);
+        
+        // Simpan posisi vertex awal untuk kalkulasi deformasi
+        const posAttr = baseGeometry.attributes.position;
+        const originalPositions = new Float32Array(posAttr.array.length);
+        originalPositions.set(posAttr.array);
+
+        // Tambahkan atribut Vertex Colors untuk menggelapkan bagian dalam cekungan (Ambient Occlusion simulasi)
+        const colors = new Float32Array(posAttr.count * 3);
+        for (let i = 0; i < posAttr.count; i++) {
+            colors[i * 3] = 1;
+            colors[i * 3 + 1] = 1;
+            colors[i * 3 + 2] = 1;
+        }
+        baseGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const initialMatConfig = materialsConfig[state.material];
+        const baseMaterial = new THREE.MeshStandardMaterial({
+            map: createGridTexture(initialMatConfig.color, initialMatConfig.gridColor),
+            roughness: initialMatConfig.roughness,
+            metalness: 0.05,
+            vertexColors: true // Aktifkan pewarnaan bayangan kedalaman pada cekungan
+        });
+
+        const baseBlock = new THREE.Mesh(baseGeometry, baseMaterial);
+        baseBlock.position.y = baseHeight / 2; // Dasar berada tepat di y = 0
+        baseBlock.castShadow = true;
+        baseBlock.receiveShadow = true;
+        scene.add(baseBlock);
+
+        // Garis Referensi Permukaan Awal (Wireframe Outline di ketinggian y = 2.0)
+        // Membantu mata membandingkan tinggi permukaan asli vs kedalaman saat tertekan
+        const refOutlineGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(baseWidth + 0.02, 0.01, baseDepth + 0.02));
+        const refOutlineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.55 });
+        const refOutline = new THREE.LineSegments(refOutlineGeo, refOutlineMat);
+        refOutline.position.y = baseHeight;
+        scene.add(refOutline);
+
+        // ==========================================
+        // 5B. PENGGARIS UKUR KEDALAMAN 3D (RULER)
+        // ==========================================
+        const rulerGroup = new THREE.Group();
+        rulerGroup.position.set(baseWidth / 2 + 0.35, 0, baseDepth / 2 - 0.5);
+        scene.add(rulerGroup);
+
+        // Tiang Penggaris
+        const rulerPostGeo = new THREE.BoxGeometry(0.08, baseHeight + 0.3, 0.08);
+        const rulerPostMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.4 });
+        const rulerPost = new THREE.Mesh(rulerPostGeo, rulerPostMat);
+        rulerPost.position.y = (baseHeight + 0.3) / 2;
+        rulerGroup.add(rulerPost);
+
+        // Garis Skala Setiap 20 cm (0.2 unit)
+        for (let y = 0; y <= baseHeight; y += 0.2) {
+            const isMajor = Math.abs(Math.round(y * 10) % 5) === 0;
+            const tickGeo = new THREE.BoxGeometry(isMajor ? 0.25 : 0.15, 0.02, 0.04);
+            const tickMat = new THREE.MeshBasicMaterial({ color: isMajor ? 0xf8fafc : 0x94a3b8 });
+            const tick = new THREE.Mesh(tickGeo, tickMat);
+            tick.position.set(-0.1, y, 0);
+            rulerGroup.add(tick);
+        }
+
+        // Penunjuk Laser/Jarum Kedalaman (Bergerak turun mengikuti dasar bidang sentuh)
+        const pointerGeo = new THREE.ConeGeometry(0.1, 0.25, 16);
+        pointerGeo.rotateZ(Math.PI / 2); // Menunjuk ke arah balok
+        const pointerMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+        const depthPointer = new THREE.Mesh(pointerGeo, pointerMat);
+        depthPointer.position.set(-0.22, baseHeight, 0);
+        rulerGroup.add(depthPointer);
+
+        // Garis bantu putus-putus horizontal dari bidang sentuh ke jarum penggaris
+        const guideLineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(baseWidth / 2 + 0.15, 0, 0)
+        ]);
+        const guideLineMat = new THREE.LineDashedMaterial({
+            color: 0xf43f5e,
+            dashSize: 0.15,
+            gapSize: 0.1
+        });
+        const depthGuideLine = new THREE.Line(guideLineGeo, guideLineMat);
+        depthGuideLine.computeLineDistances();
+        depthGuideLine.position.set(0, baseHeight, baseDepth / 2 - 0.5);
+        scene.add(depthGuideLine);
+
+        // ==========================================
+        // 6. OBJEK 3D: PENEKAN (PISTON + BIDANG SENTUH + VEKTOR GAYA)
+        // ==========================================
+        const presserGroup = new THREE.Group();
+        scene.add(presserGroup);
+
+        // A. Bidang Sentuh (Alas Penekan yang Ukurannya Dinamis)
+        const contactPadGeo = new THREE.BoxGeometry(1, 0.35, 1);
+        const contactPadMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8, // Biru cerah menandakan Bidang Sentuh (A)
+            metalness: 0.6,
+            roughness: 0.25
+        });
+        const contactPad = new THREE.Mesh(contactPadGeo, contactPadMat);
+        contactPad.position.y = 0.175; // Titik 0 grup adalah permukaan paling bawah alas
+        contactPad.castShadow = true;
+        contactPad.receiveShadow = true;
+        presserGroup.add(contactPad);
+
+        // B. Batang Piston Logam
+        const shaftGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.4, 32);
+        const shaftMat = new THREE.MeshStandardMaterial({
+            color: 0x94a3b8,
+            metalness: 0.85,
+            roughness: 0.2
+        });
+        const pistonShaft = new THREE.Mesh(shaftGeo, shaftMat);
+        pistonShaft.position.y = 0.35 + 0.7;
+        pistonShaft.castShadow = true;
+        presserGroup.add(pistonShaft);
+
+        // C. Lempengan Beban Visual (Bertambah saat Gaya F membesar)
+        const weightsGroup = new THREE.Group();
+        weightsGroup.position.y = 0.55;
+        presserGroup.add(weightsGroup);
+
+        const maxWeights = 8;
+        const weightMeshes = [];
+        const weightGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.12, 32);
+        const weightMat = new THREE.MeshStandardMaterial({
+            color: 0x475569,
+            metalness: 0.75,
+            roughness: 0.3
+        });
+
+        for (let i = 0; i < maxWeights; i++) {
+            const wMesh = new THREE.Mesh(weightGeo, weightMat);
+            wMesh.position.y = i * 0.14;
+            wMesh.castShadow = true;
+            wMesh.receiveShadow = true;
+            weightsGroup.add(wMesh);
+            weightMeshes.push(wMesh);
+        }
+
+        // D. Panah Vektor Gaya (F) di Atas Piston
+        const arrowGroup = new THREE.Group();
+        arrowGroup.position.y = 1.95;
+        presserGroup.add(arrowGroup);
+
+        const arrowMat = new THREE.MeshStandardMaterial({
+            color: 0xf43f5e, // Merah Rose untuk Gaya (F)
+            emissive: 0x881337,
+            emissiveIntensity: 0.35,
+            roughness: 0.3
+        });
+
+        // Ujung Panah (Kerucut menghadap ke bawah)
+        const coneGeo = new THREE.ConeGeometry(0.28, 0.5, 24);
+        const arrowCone = new THREE.Mesh(coneGeo, arrowMat);
+        arrowCone.rotation.x = Math.PI; // Menghadap ke bawah
+        arrowCone.position.y = 0.25;
+        arrowCone.castShadow = true;
+        arrowGroup.add(arrowCone);
+
+        // Batang Panah (Silinder yang memanjang sesuai nilai F)
+        const arrowShaftGeo = new THREE.CylinderGeometry(0.11, 0.11, 1, 20);
+        // Geser pivot ke bawah agar mudah di-scale ke atas
+        arrowShaftGeo.translate(0, 0.5, 0);
+        const arrowShaft = new THREE.Mesh(arrowShaftGeo, arrowMat);
+        arrowShaft.position.y = 0.5;
+        arrowShaft.castShadow = true;
+        arrowGroup.add(arrowShaft);
+
+        // ==========================================
+        // 7. LOGIKA DEFORMASI & PEMBARUAN VISUAL 3D
+        // ==========================================
+        let currentSinkDepth = 0;
+
+        function updateSimulationVisuals() {
+            const matCfg = materialsConfig[state.material];
+            
+            // 1. Hitung dimensi sisi alas dari Luas Bidang Sentuh (A = s * s -> s = sqrt(A))
+            // Skala visual: 1 m² = 1.0 unit, 10 m² = ~3.16 unit
+            const sideLength = Math.sqrt(state.area);
+            contactPad.scale.set(sideLength, 1, sideLength);
+
+            // 2. Hitung kedalaman cekungan (targetSinkDepth) berdasarkan Tekanan (P)
+            const rawDepth = state.pressure * matCfg.compliance;
+            const targetSinkDepth = Math.min(rawDepth, matCfg.maxDepth);
+            
+            // Smooth interpolation untuk pergerakan turun/naik
+            currentSinkDepth += (targetSinkDepth - currentSinkDepth) * 0.15;
+
+            // Posisikan objek penekan tepat di kedalaman cekungan
+            const surfaceTopY = baseHeight; // y = 2.0
+            const currentSurfaceY = surfaceTopY - currentSinkDepth;
+            presserGroup.position.y = currentSurfaceY;
+
+            // Update posisi Jarum Penggaris & Garis Bantu Kedalaman
+            depthPointer.position.y = currentSurfaceY;
+            depthGuideLine.position.y = currentSurfaceY;
+
+            // Update angka kedalaman di UI (1 unit = 100 cm)
+            const depthCm = (currentSinkDepth * 100).toFixed(1);
+            document.getElementById('formula-depth').textContent = depthCm;
+
+            // 3. Perbarui ukuran Panah Vektor Gaya (F)
+            // 5. Deformasi Real-Time & Efek Bayangan Kedalaman (AO) pada Vertex Balok Alas
+            const halfSide = sideLength / 2;
+            const transitionZone = 0.45; // Zona transisi lebih tajam agar dinding cekungan terlihat tegas
+            const colorAttr = baseGeometry.attributes.color;
+
+            for (let i = 0; i < posAttr.count; i++) {
+                const ix = i * 3;
+                const iy = i * 3 + 1;
+                const iz = i * 3 + 2;
+
+                const ox = originalPositions[ix];
+                const oy = originalPositions[iy];
+                const oz = originalPositions[iz];
+
+                // Hanya deformasi bagian atas balok (oy > -baseHeight/2)
+                const heightFactor = (oy + baseHeight / 2) / baseHeight; // 0 di dasar, 1 di permukaan atas
+
+                let shade = 1.0; // Faktor kecerahan vertex (1.0 = normal, < 1.0 = bayangan gelap di dalam lubang)
+
+                if (heightFactor > 0.01 && currentSinkDepth > 0.001) {
+                    // Hitung jarak titik (ox, oz) ke kotak bidang sentuh [-halfSide, halfSide]
+                    const dx = Math.max(0, Math.abs(ox) - halfSide);
+                    const dz = Math.max(0, Math.abs(oz) - halfSide);
+                    const distOutside = Math.sqrt(dx * dx + dz * dz);
+
+                    let depression = 0;
+                    if (distOutside === 0) {
+                        // Tepat di bawah bidang sentuh: amblas penuh & lebih gelap
+                        depression = currentSinkDepth;
+                        shade = Math.max(0.45, 1.0 - (currentSinkDepth * 0.35));
+                    } else if (distOutside < transitionZone) {
+                        // Area dinding cekungan melengkung di sekitar tepi bidang sentuh
+                        const t = 1 - (distOutside / transitionZone);
+                        const smoothT = t * t * (3 - 2 * t);
+                        depression = currentSinkDepth * smoothT;
+                        // Gelapkan dinding cekungan untuk efek kedalaman 3D yang dramatis
+                        shade = Math.max(0.5, 1.0 - (depression * 0.38));
+                    }
+
+                    posAttr.array[iy] = oy - (depression * heightFactor);
+                } else {
+                    posAttr.array[iy] = oy;
+                }
+
+                // Terapkan bayangan kedalaman pada permukaan atas
+                if (oy > 0) {
+                    colorAttr.array[ix] = shade;
+                    colorAttr.array[iy] = shade;
+                    colorAttr.array[iz] = shade;
+                }
+            }
+
+            posAttr.needsUpdate = true;
+            colorAttr.needsUpdate = true;
+            baseGeometry.computeVertexNormals();
+        }
+
+        // ==========================================
+        // 8. SINKRONISASI UI & PERHITUNGAN FISIKA
+        // ==========================================
+        const sliderF = document.getElementById('slider-f');
+        const sliderA = document.getElementById('slider-a');
+        const sliderP = document.getElementById('slider-p');
+        const lockPCheckbox = document.getElementById('lock-p-checkbox');
+        const selectMaterial = document.getElementById('select-material');
+        const btnReset = document.getElementById('btn-reset');
+
+        const valF = document.getElementById('val-f');
+        const valA = document.getElementById('val-a');
+        const valP = document.getElementById('val-p');
+
+        const formulaP = document.getElementById('formula-p');
+        const formulaF = document.getElementById('formula-f');
+        const formulaA = document.getElementById('formula-a');
+        const conclusionText = document.getElementById('conclusion-text');
+        const materialBadge = document.getElementById('material-badge');
+        const lockHint = document.getElementById('lock-hint');
+
+        function updateUI() {
+            // Update label nilai
+            valF.textContent = `${Math.round(state.force)} N`;
+            valA.textContent = `${state.area.toFixed(1)} m²`;
+            valP.textContent = `${state.pressure.toFixed(1)} Pa`;
+
+            // Update posisi slider
+            sliderF.value = state.force;
+            sliderA.value = state.area;
+            sliderP.value = Math.min(250, Math.max(5, state.pressure));
+
+            // Update rumus dinamis
+            formulaP.textContent = state.pressure.toFixed(1);
+            formulaF.textContent = `${Math.round(state.force)} N`;
+            formulaA.textContent = `${state.area.toFixed(1)} m²`;
+
+            // Update kesimpulan edukasi dinamis
+            updateConclusion();
+        }
+
+        function updateConclusion() {
+            if (state.lastChanged === 'force') {
+                conclusionText.innerHTML = state.force > 250 
+                    ? `<strong>Gaya (F) diperbesar</strong> pada luas tetap → <strong>Tekanan membesar</strong> → Benda amblas lebih dalam.`
+                    : `<strong>Gaya (F) diperkecil</strong> pada luas tetap → <strong>Tekanan mengecil</strong> → Cekungan menjadi dangkal.`;
+            } else if (state.lastChanged === 'area') {
+                conclusionText.innerHTML = state.area < 4.0
+                    ? `<strong>Bidang sentuh (A) diperkecil</strong> (lebih runcing) → <strong>Tekanan membesar</strong> → Benda amblas lebih dalam!`
+                    : `<strong>Bidang sentuh (A) diperlebar</strong> → Gaya tersebar merata → <strong>Tekanan mengecil</strong>.`;
+            } else if (state.lastChanged === 'pressure') {
+                conclusionText.innerHTML = `<strong>Tekanan (P) diatur manual</strong> ke ${state.pressure.toFixed(1)} Pa → Gaya otomatis disesuaikan menjadi <strong>${Math.round(state.force)} N</strong>.`;
+            } else if (state.lastChanged === 'material') {
+                const matName = materialsConfig[state.material].name;
+                conclusionText.innerHTML = `Media diganti ke <strong>${matName}</strong>. Dengan tekanan ${state.pressure.toFixed(1)} Pa, tingkat kedalaman cekungan menyesuaikan kepadatan bahan.`;
+            } else {
+                conclusionText.innerHTML = `Rumus <strong>P = F / A</strong>: Tekanan berbanding lurus dengan Gaya (F) dan berbanding terbalik dengan Luas Bidang (A).`;
+            }
+        }
+
+        // Event Listener: Slider Gaya (F)
+        sliderF.addEventListener('input', (e) => {
+            state.force = parseFloat(e.target.value);
+            if (state.isPressureLocked) {
+                // Jika P dikunci, sesuaikan A = F / P (dalam batas 1 - 10 m²)
+                let newArea = state.force / state.pressure;
+                newArea = Math.min(10, Math.max(1, newArea));
+                state.area = newArea;
+                state.pressure = state.force / state.area;
+            } else {
+                state.pressure = state.force / state.area;
+            }
+            state.lastChanged = 'force';
+            updateUI();
+        });
+
+        // Event Listener: Slider Luas Bidang Sentuh (A)
+        sliderA.addEventListener('input', (e) => {
+            state.area = parseFloat(e.target.value);
+            if (state.isPressureLocked) {
+                // Jika P dikunci, sesuaikan F = P * A (dalam batas 10 - 500 N)
+                let newForce = state.pressure * state.area;
+                newForce = Math.min(500, Math.max(10, newForce));
+                state.force = newForce;
+                state.pressure = state.force / state.area;
+            } else {
+                state.pressure = state.force / state.area;
+            }
+            state.lastChanged = 'area';
+            updateUI();
+        });
+
+        // Event Listener: Checkbox Kunci / Atur Tekanan (P)
+        lockPCheckbox.addEventListener('change', (e) => {
+            state.isPressureLocked = e.target.checked;
+            sliderP.disabled = !state.isPressureLocked;
+            if (state.isPressureLocked) {
+                lockHint.classList.remove('hidden');
+            } else {
+                lockHint.classList.add('hidden');
+            }
+        });
+
+        // Event Listener: Slider Tekanan (P) Manual
+        sliderP.addEventListener('input', (e) => {
+            if (!state.isPressureLocked) return;
+            const targetP = parseFloat(e.target.value);
+            // Sesuaikan F berdasarkan P target dan A saat ini
+            let newForce = targetP * state.area;
+            if (newForce > 500) {
+                newForce = 500;
+                state.area = Math.max(1, newForce / targetP);
+            } else if (newForce < 10) {
+                newForce = 10;
+                state.area = Math.min(10, newForce / targetP);
+            }
+            state.force = newForce;
+            state.pressure = state.force / state.area;
+            state.lastChanged = 'pressure';
+            updateUI();
+        });
+
+        // Event Listener: Pilihan Material
+        selectMaterial.addEventListener('change', (e) => {
+            state.material = e.target.value;
+            const cfg = materialsConfig[state.material];
+            
+            // Update tekstur & material 3D
+            baseMaterial.map = createGridTexture(cfg.color, cfg.gridColor);
+            baseMaterial.roughness = cfg.roughness;
+            baseMaterial.needsUpdate = true;
+
+            materialBadge.textContent = cfg.name;
+            state.lastChanged = 'material';
+            updateUI();
+        });
+
+        // Event Listener: Tombol Reset
+        btnReset.addEventListener('click', () => {
+            state.force = 200;
+            state.area = 4.0;
+            state.pressure = 50.0;
+            state.isPressureLocked = false;
+            state.material = 'foam';
+            state.lastChanged = 'init';
+
+            lockPCheckbox.checked = false;
+            sliderP.disabled = true;
+            lockHint.classList.add('hidden');
+            selectMaterial.value = 'foam';
+
+            const cfg = materialsConfig['foam'];
+            baseMaterial.map = createGridTexture(cfg.color, cfg.gridColor);
+            baseMaterial.roughness = cfg.roughness;
+            baseMaterial.needsUpdate = true;
+            materialBadge.textContent = cfg.name;
+
+            // Reset posisi kamera
+            camera.position.set(6.8, 6.8, 7.8);
+            controls.target.set(0, 1.2, 0);
+
+            updateUI();
+        });
+
+        // Toggle Panel Kontrol di Mobile
+        const toggleBtn = document.getElementById('toggle-controls-btn');
+        const controlsPanel = document.getElementById('controls-panel');
+        toggleBtn.addEventListener('click', () => {
+            controlsPanel.classList.toggle('hidden');
+        });
+
+        // Kontrol Modal Penjelasan Konsep Materi
+        const conceptModal = document.getElementById('concept-modal');
+        const btnOpenConcept = document.getElementById('btn-open-concept');
+        const btnCloseConcept = document.getElementById('btn-close-concept');
+        const btnGotItConcept = document.getElementById('btn-got-it-concept');
+
+        function openConceptModal() {
+            conceptModal.classList.remove('hidden');
+            conceptModal.classList.add('flex');
+        }
+
+        function closeConceptModal() {
+            conceptModal.classList.add('hidden');
+            conceptModal.classList.remove('flex');
+        }
+
+        btnOpenConcept.addEventListener('click', openConceptModal);
+        btnCloseConcept.addEventListener('click', closeConceptModal);
+        btnGotItConcept.addEventListener('click', closeConceptModal);
+        conceptModal.addEventListener('click', (e) => {
+            if (e.target === conceptModal) closeConceptModal();
+        });
+
+        // ==========================================
+        // 9. RESPONSIVE RESIZE & ANIMATION LOOP
+        // ==========================================
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updateSimulationVisuals();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Jalankan saat halaman selesai dimuat
+        window.onload = function () {
+            updateUI();
+            animate();
+        };
+    </script>
+</body>
+</html>
