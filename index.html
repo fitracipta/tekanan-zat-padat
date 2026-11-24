@@ -171,13 +171,13 @@
                         <div class="flex items-start gap-2.5 bg-slate-800/30 p-3 rounded-xl border border-slate-800">
                             <span class="text-amber-400 font-bold">•</span>
                             <div>
-                                <strong class="text-slate-200">Ujung Paku & Mata Pisau Dibuat Runcing/Tajam:</strong> Memperkecil luas bidang sentuh ($A$) sehingga dengan gaya dorong kecil dihasilkan tekanan besar agar mudah menembus kayu atau memotong benda.
+                                <strong class="text-slate-200">Ujung Paku & Mata Pisau Dibuat Runcing/Tajam:</strong> Memperkecil luas bidang sentuh (A) sehingga dengan gaya dorong kecil dihasilkan tekanan besar agar mudah menembus kayu atau memotong benda.
                             </div>
                         </div>
                         <div class="flex items-start gap-2.5 bg-slate-800/30 p-3 rounded-xl border border-slate-800">
                             <span class="text-amber-400 font-bold">•</span>
                             <div>
-                                <strong class="text-slate-200">Sepatu Salju & Kaki Bebek Berselaput:</strong> Memperbesar luas bidang sentuh ($A$) agar tekanan ke permukaan salju atau lumpur menjadi kecil sehingga tidak mudah terperosok.
+                                <strong class="text-slate-200">Sepatu Salju & Kaki Bebek Berselaput:</strong> Memperbesar luas bidang sentuh (A) agar tekanan ke permukaan salju atau lumpur menjadi kecil sehingga tidak mudah terperosok.
                             </div>
                         </div>
                     </div>
@@ -467,7 +467,7 @@
         const baseWidth = 6.5;
         const baseHeight = 2.0;
         const baseDepth = 6.5;
-        // Segmen tinggi (80x20x80) agar lekukan cekungan tajam dan sangat mulus
+        // Segmen tinggi (80x16x80) agar lekukan cekungan tajam dan sangat mulus
         const baseGeometry = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth, 80, 16, 80);
         
         // Simpan posisi vertex awal untuk kalkulasi deformasi
@@ -670,6 +670,18 @@
             document.getElementById('formula-depth').textContent = depthCm;
 
             // 3. Perbarui ukuran Panah Vektor Gaya (F)
+            const forceRatio = (state.force - 10) / (500 - 10); // 0.0 hingga 1.0
+            const shaftLength = 0.4 + forceRatio * 1.8;
+            const arrowThickness = 0.75 + forceRatio * 0.65;
+            arrowShaft.scale.set(arrowThickness, shaftLength, arrowThickness);
+            arrowCone.scale.set(arrowThickness, 1, arrowThickness);
+
+            // 4. Perbarui jumlah lempengan beban yang terlihat
+            const activeWeights = Math.max(1, Math.round((state.force / 500) * maxWeights));
+            for (let i = 0; i < maxWeights; i++) {
+                weightMeshes[i].visible = i < activeWeights;
+            }
+
             // 5. Deformasi Real-Time & Efek Bayangan Kedalaman (AO) pada Vertex Balok Alas
             const halfSide = sideLength / 2;
             const transitionZone = 0.45; // Zona transisi lebih tajam agar dinding cekungan terlihat tegas
